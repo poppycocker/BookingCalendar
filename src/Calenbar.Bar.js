@@ -1,7 +1,7 @@
 import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
 import moment from 'moment'
 
-export default class Record {
+export default class Bar {
   /**
    * Constructs the object.
    *
@@ -84,7 +84,7 @@ export default class Record {
     // remove self from calendar
     let calendar = this._calendar
     this._calendar = null
-    calendar.removeRecord(this.id)
+    calendar.removeBar(this.id)
     return true
   }
 }

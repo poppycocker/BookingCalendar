@@ -1,7 +1,7 @@
 import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
-import Record from './BookingCalendar.Record.js'
+import Record from './Calenbar.Bar.js'
 
-export default class BookingCalendar {
+export default class Calenbar {
   /**
    * Constructs the object.
    *
@@ -56,7 +56,7 @@ export default class BookingCalendar {
   /**
    * Puts a record.
    *
-   * @param      {BookingCalendar.Record}  record  The record
+   * @param      {Calenbar.Record}  record  The record
    * @return     {boolean} success / failed
    * @fires      put
    */
@@ -123,4 +123,4 @@ export default class BookingCalendar {
   notifyChange(record) {}
 }
 
-BookingCalendar.Record = Record
+Calenbar.Record = Record

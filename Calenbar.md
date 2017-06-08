@@ -1,7 +1,7 @@
-BookingCalendar
+Calenbar
 =================
 
-A JS Library for booking table with vertical, daily calendar.
+A JS Library for booking table with horizontal, daily calendar.
 
 ## 概要
 
