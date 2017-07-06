@@ -1,23 +1,26 @@
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener('DOMContentLoaded', function() {
   let rows = {
     AAA: 'aaa',
     BBB: 'bbb',
     CCC: 'ccc',
     DDD: 'ddd',
-    EEE: 'eee'
+    EEE: 'eee',
+    FFF: 'fff',
+    GGG: 'ggg',
+    HHH: 'hhh',
+    III: 'iii'
   }
   let d = function(yyyymmdd) {
     return new Date(yyyymmdd)
   }
-  let opts = {
-    records: [
-      new BookingCalendar.Record('01', 'AAA', d('2017/5/20'), d('2017/5/22')),
-      new BookingCalendar.Record('02', 'AAA', d('2017/5/25'), d('2017/5/27')),
-      new BookingCalendar.Record('03', 'BBB', d('2017/5/25'), d('2017/5/26')),
-      new BookingCalendar.Record('04', 'CCC', d('2017/5/25'), d('2017/5/25')),
-      new BookingCalendar.Record('05', 'EEE', d('2017/5/15'), d('2017/6/1'))
-    ]
-  }
-  window.bc = new BookingCalendar('cal', rows, opts)
+  let bars = [
+    new Calenbar.Bar('AAA', d('2017/6/20'), d('2017/6/22'), '01'),
+    new Calenbar.Bar('AAA', d('2017/6/25'), d('2017/6/27'), '02'),
+    new Calenbar.Bar('BBB', d('2017/6/25'), d('2017/6/26'), '03'),
+    new Calenbar.Bar('CCC', d('2017/6/25'), d('2017/6/25'), '04'),
+    new Calenbar.Bar('EEE', d('2017/6/28'), d('2017/7/16'), '05')
+  ]
+  let config = null
 
-});
+  window.cb = new Calenbar('cal', rows, bars, config)
+})
