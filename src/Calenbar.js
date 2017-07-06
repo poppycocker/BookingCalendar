@@ -1,30 +1,53 @@
 import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
-import Record from './Calenbar.Bar.js'
+import Canvas from './Calenbar.Canvas.js'
+import TopLeftBlank from './Calenbar.TopLeftBlank.js'
+import RowHeaders from './Calenbar.RowHeaders.js'
+import ColCalendar from './Calenbar.ColCalendar.js'
+import Bar from './Calenbar.Bar.js'
+
+var defaultConfig = {
+  center_date: new Date('2017/6/25'),
+  date_range: 60,
+  bar: {
+    padding: 4,
+    round: 5,
+    fill: '#1e88e5'
+  },
+  row_head: {
+    width: 120,
+    padding: 4,
+    round: 5,
+    fill: '#bada55'
+  },
+  col_head: {
+    height: 80,
+    font_size: 12
+  },
+  grid: {
+    width: 50,
+    height: 80
+  }
+}
 
 export default class Calenbar {
   /**
    * Constructs the object.
    *
    * @param {string} id - id of container element
-   * @param {array<Row>} rows - array of row object
-   * @param {object} opts - options
+   * @param {object} rows - array of row object
+   * @param {array<Bars>} [bars] - array of Bar object
+   * @param {object} config - configs
    */
-  constructor(id, rows, opts) {
-    opts = opts || {}
-    let el = document.getElementById(id)
+  constructor(id, rows, bars, config) {
+    this._initializeConfig(config)
     /**
-     *  drawing surface
-     *  @type {Snap.Element}
+     * bars
+     * @type {array<Bar>}
      */
-    this._surface = Snap(el).addClass('booking-calendar')
-    /**
-     * records
-     * @type {array<Record>}
-     */
-    this._records = []
+    this._bars = bars || []
     /**
      * rows
-     * @type {array<Row>}
+     * @type {object}
      */
     this._rows = rows
     /**
@@ -32,16 +55,58 @@ export default class Calenbar {
      * initial value is today.
      * @type {Date}
      */
-    this._currentCenter = new Date()
+    this._currentCenter = new Date(this._config.center_date)
 
-    opts.records = opts.records || []
-    opts.records.forEach(record => this.putRecord(record))
+    this._initializeCanvas(id)
 
-    this.render()
+    this._bars.forEach(bar => this.putBar(bar))
+
+  // this.render()
   }
-  get records() {
+  _initializeConfig(config) {
+    this._config = config || defaultConfig
+  }
+  _initializeCanvas(id) {
+    const config = this._config
+    let outerContainer = document.getElementById(id)
+    let container = document.createElement('div')
+    container.style.display = 'grid'
+    container.style.gridTemplateRows = config.col_head.height + 'px' + ' 1fr'
+    container.style.gridTemplateColumns = config.row_head.width + 'px' + ' 1fr'
+    container.style.width = '100%'
+    container.style.height = '100%'
+    outerContainer.appendChild(container)
+
+    let topLeftBlank = new TopLeftBlank(container, config)
+    let colCalendar = new ColCalendar(container, config)
+    let rowHeaders = new RowHeaders(container, config, this._rows)
+    let canvas = new Canvas(container, config, this._rows, this.onCollisionCheckRequired.bind(this))
+    canvas.addListener('bar_added', this.onBarAdded, this)
+    this._canvas = canvas
+
+    // sync scroll
+    canvas.containerDom.addEventListener('scroll', function(e) {
+      colCalendar.containerDom.scrollLeft = e.target.scrollLeft
+      rowHeaders.containerDom.scrollTop = e.target.scrollTop
+    })
+
+    // initial scroll position: today
+    canvas.containerDom.scrollLeft = canvas.snapElement.attr('width').replace('px', '') / 2
+      - canvas.containerDom.clientWidth / 2
+      + config.grid.width / 2
+  }
+
+  onBarAdded(bar) {
+    return this.putBar(bar)
+  }
+
+  onCollisionCheckRequired(bar) {
+    return !this.doesIntersectWith(bar)
+  }
+
+  get bars() {
     // shallow copy
-    return [].concat(this._records)
+    return [].concat(this._bars)
   }
   get rows() {
     // copy
@@ -54,73 +119,64 @@ export default class Calenbar {
    */
   set center(date) {}
   /**
-   * Puts a record.
+   * Puts a bar.
    *
-   * @param      {Calenbar.Record}  record  The record
+   * @param      {Calenbar.Bar}  bar  The bar
    * @return     {boolean} success / failed
    * @fires      put
    */
-  putRecord(record) {
-    if (this.canPutRecord(record)) {
+  putBar(bar) {
+    if (this.canPutBar(bar)) {
       return false
     }
-    record.calendar = this
-    this._records.push(record)
+    bar.canvas = this._canvas
+    bar.render()
+    this._bars.push(bar)
     return true
   }
   /**
-   * Removes a record.
+   * Removes a bar.
    *
-   * @param      {string}  id  record id to remove
+   * @param      {string}  id  bar id to remove
    * @return     {boolean} success / failed
    * @fires      remove
    */
-  removeRecord(id) {
-    let idx = this._records.findIndex(record => record.id === id)
+  removeBar(id) {
+    let idx = this._bars.findIndex(bar => bar.id === id)
     if (idx === -1) {
       return false
     }
-    this._records[idx].release()
-    this._records.splice(idx, 1)
+    this._bars[idx].release()
+    this._bars.splice(idx, 1)
     return true
   }
-  findRecord(id) {
-    return this._records.find(record => record.id === id)
-  }
-  canPutRecord(record) {
-    // check: is already put
-    if (record.calendar) {
-      return false
+  findBar(id) {
+    if (!id) {
+      return null
     }
+    return this._bars.find(bar => bar.id === id)
+  }
+  canPutBar(bar) {
     // check: is row id valid
-    if (!this._rows[record.rowId]) {
+    if (!this._rows[bar.rowId]) {
       return false
     }
     // check: id uniqueness
-    if (this.findRecord(record.id)) {
+    if (bar.hasEffectiveId() && this.findBar(bar.id)) {
       return false
     }
     // check: date range intersection
-    return !this.doesIntersectWith(record)
+    return !this.doesIntersectWith(bar)
   }
-  doesIntersectWith(record) {
-    return this._records
-      .filter(r => r.id !== record.id)
-      .filter(r => r.rowId === record.rowId)
+  doesIntersectWith(bar) {
+    return this._bars
+      .filter(r => r.rowId === bar.rowId)
+      .filter(r => r.id !== bar.id)
+      .filter(r => r !== bar)
       .some(r => {
-        return record.doesIntersectWith(r)
-      });
+        return bar.doesIntersectWith(r)
+      })
   }
-  /**
-   * render function
-   */
-  render() {
-    this.make_grid()
-  }
-  make_grid() {
-    
-  }
-  notifyChange(record) {}
 }
 
-Calenbar.Record = Record
+Calenbar.Bar = Bar
