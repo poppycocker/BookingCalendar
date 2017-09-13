@@ -1,6 +1,9 @@
 import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
+import Util from './Util.js'
 import Fragment from './Calenbar.Fragment.js'
 import Bar from './Calenbar.Bar.js'
+import DateProcessor from './Calenbar.DateProcessor.js'
+import DrawingState from './Calenbar.DrawingState.js'
 
 export default class Canvas extends Fragment {
   constructor(outerContainer, config, rows, collisionCheckCallback) {
@@ -11,8 +14,7 @@ export default class Canvas extends Fragment {
     this._render()
     this._setEventHandler()
 
-    this._currentBar = null
-    this._startPos = null
+    this._drawing = new DrawingState(this)
     this._ghost = null
   }
 
@@ -55,46 +57,41 @@ export default class Canvas extends Fragment {
   }
 
   _onDragStart(x, y, e) {
-    e.stopPropagation()
-    this._startPos = this.screenPointToGridPos(e.offsetX, e.offsetY)
-    this._currentBar = new Bar(this._startPos.rowId, this._startPos.date, this._startPos.date)
-
-    if (!this._collisionCheckCallback(this._currentBar)) {
-      this._startPos = null
-      this._currentBar = null
+    if (this._drawing.now > DrawingState.IDLE) {
       return
     }
-
-    this._currentBar.canvas = this
-    this._currentBar.render()
+    e.stopPropagation()
+    const pos = this.screenPointToGridPos(e.offsetX, e.offsetY)
+    this._drawing.begin(pos)
   }
 
   _onDragMove(dx, dy, x, y, e) {
     e.stopPropagation()
     let pos = this.screenPointToGridPos(e.offsetX, e.offsetY)
-    if (!this._startPos) {
+    if (this._drawing.now < DrawingState.PROCESSING) {
       return
     }
     // on dragend
     if (e.clientX === 0 && e.clientY === 0) {
       return
     }
-    // 反転ケース考慮
-    let isReverse = pos.date.getTime() < this._startPos.date.getTime()
-    this._currentBar.startDate = isReverse ? pos.date : this._startPos.date
-    this._currentBar.finishDate = isReverse ? this._startPos.date : pos.date
-
-    if (!this._collisionCheckCallback(this._currentBar)) {
+    if (!this._drawing.update(pos)) {
       return
     }
-    this._currentBar.render()
+    if (!this._collisionCheckCallback(this._drawing.bar)) {
+      return
+    }
+    this._drawing.bar.render()
   }
 
   _onDragEnd(e) {
+    if (this._drawing.now < DrawingState.RENDERED) {
+      this._drawing.finish()
+      return
+    }
     e.stopPropagation()
-    this.getEventDispatcher('bar_added').dispatch(this._currentBar)
-    this._startPos = null
-    this._currentBar = null
+    this.getEventDispatcher('bar_added').dispatch(this._drawing.bar)
+    this._drawing.finish()
   }
 
   _onHoverIn(e, x, y) {
@@ -142,9 +139,8 @@ export default class Canvas extends Fragment {
 
   _getStartDate() {
     const config = this._config
-    let date = new Date(config.center_date)
-    date.setDate(date.getDate() - config.date_range / 2)
-    date.setHours(0, 0, 0, 0)
+    let date = new DateProcessor(config.center_date)
+    date.addDate(config.date_range / 2 * -1)
     return date
   }
 
@@ -154,7 +150,7 @@ export default class Canvas extends Fragment {
     let rowIdx = Math.floor(y / config.grid.height)
     let rowId = this.rowIdFromIdx(rowIdx)
     let date = this._getStartDate(config)
-    date.setDate(date.getDate() + Math.floor(x / config.grid.width))
+    date.addDate(Util.halfRound(x / config.grid.width))
     return {
       rowId,
       date
@@ -164,7 +160,7 @@ export default class Canvas extends Fragment {
   gridPosToScreenPoint(pos) {
     const config = this._config
     let startDate = this._getStartDate(config)
-    let days = Math.floor((pos.date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+    let days = pos.date.diffDays(startDate)
     return {
       x: config.grid.width * days,
       y: config.grid.height * this.rowIdxFromId(pos.rowId)

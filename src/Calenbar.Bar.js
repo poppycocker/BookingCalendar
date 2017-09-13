@@ -1,6 +1,8 @@
 import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
 import moment from 'moment'
+import Util from './Util.js'
 import Observable from './Calenbar.Observable.js'
+import DateProcessor from './Calenbar.DateProcessor.js'
 
 export default class Bar extends Observable {
   /**
@@ -15,8 +17,9 @@ export default class Bar extends Observable {
   constructor(rowId, startDate, finishDate, id, customData) {
     super()
     this._rowId = rowId
-    this._start = moment(startDate)
-    this._finish = moment(finishDate)
+    this._start = startDate
+    this._finish = finishDate
+    this._correctDateOrder()
     this._id = id
     this._customData = customData
     /**
@@ -56,17 +59,19 @@ export default class Bar extends Observable {
     return canvas ? this.bindTo(canvas) : this.releaseFromCanvas()
   }
   get startDate() {
-    return this._start.toDate()
+    return this._start
   }
   set startDate(date) {
-    this._start = moment(date)
+    this._start = date
+    this._correctDateOrder()
     this.raiseChange()
   }
   get finishDate() {
-    return this._finish.toDate()
+    return this._finish
   }
   set finishDate(date) {
-    this._finish = moment(date)
+    this._finish = date
+    this._correctDateOrder()
     this.raiseChange()
   }
   hasEffectiveId() {
@@ -79,6 +84,15 @@ export default class Bar extends Observable {
     this._element ? this._modify() : this._create()
   }
 
+  _correctDateOrder() {
+    if (this._start.getTime() <= this._finish.getTime()) {
+      return
+    }
+    const tmp = this._start
+    this._start = this._finish
+    this._finish = tmp
+  }
+
   _create() {
     let config = this.canvas.config
     let p = this.canvas.gridPosToScreenPoint({
@@ -88,7 +102,7 @@ export default class Bar extends Observable {
     let pad = config.bar.padding
     let x = pad + p.x
     let y = pad + p.y
-    let w = config.grid.width * (this._finish.diff(this._start, 'days') + 1) - pad * 2
+    let w = config.grid.width * (this._finish.diffDays(this._start)) - pad * 2
     let h = config.grid.height - pad * 2
     let r = config.bar.round
     this._element = this.canvas.snapElement.rect(x, y, w, h, r).attr({
@@ -99,7 +113,7 @@ export default class Bar extends Observable {
 
   _modify() {
     let config = this.canvas.config
-    let days = Math.floor((this.finishDate.getTime() - this.startDate.getTime()) / (1000 * 60 * 60 * 24))
+    let days = Util.halfRound((this.finishDate.getTime() - this.startDate.getTime()) / (1000 * 60 * 60 * 24))
     let pad = config.bar.padding
     let p = this.canvas.gridPosToScreenPoint({
       rowId: this._rowId,
@@ -108,7 +122,7 @@ export default class Bar extends Observable {
     this._element.attr({
       x: pad + p.x,
       y: pad + p.y,
-      width: config.grid.width * (Math.abs(days) + 1) - pad * 2
+      width: config.grid.width * (Math.abs(days)) - pad * 2
     })
     return this._element
   }
@@ -131,21 +145,21 @@ export default class Bar extends Observable {
   }
   _onDragStart(x, y, e) {
     e.stopPropagation()
-    this._dragOrigin = moment(this._start)
+    this._dragOrigin = new DateProcessor(this._start)
   }
   _onDragMove(dx, dy, x, y, e) {
     e.stopPropagation()
     let config = this.canvas.config
-    let daysStart2Current = Math.floor(dx / config.grid.width)
-    let daysStart2Prev = this._start.diff(this._dragOrigin, 'd')
+    let daysStart2Current = Util.halfRound(dx / config.grid.width)
+    let daysStart2Prev = this._start.diffDays(this._dragOrigin)
     let daysPrev2Current = daysStart2Current - daysStart2Prev
-    this._start.add(daysPrev2Current, 'd')
-    this._finish.add(daysPrev2Current, 'd')
+    this._start.addDate(daysPrev2Current)
+    this._finish.addDate(daysPrev2Current)
 
     if (!this._canvas.checkCollision(this)) {
       // reset
-      this._start.diff(daysPrev2Current, 'd')
-      this._finish.diff(daysPrev2Current, 'd')
+      this._start.addDate(daysPrev2Current * -1)
+      this._finish.addDate(daysPrev2Current * -1)
       return
     }
     this.render()
@@ -162,11 +176,10 @@ export default class Bar extends Observable {
     // this._canvas.notifyChange(record)
   }
   doesIntersectWith(another) {
-    let s1 = this._start
-    let s2 = another._start
-    // for range calculation, add 23:59 to finish date.
-    let f1 = moment(this._finish).add(23, 'h').add(59, 'm')
-    let f2 = moment(another._finish).add(23, 'h').add(59, 'm')
+    let s1 = this._start.moment()
+    let s2 = another._start.moment()
+    let f1 = this._finish.moment()
+    let f2 = another._finish.moment()
     return f1.diff(s2) > 0 && f2.diff(s1) > 0
   }
   bindTo(canvas) {

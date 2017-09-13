@@ -49,7 +49,7 @@ export default class ColCalendar extends Fragment {
 
     // draw daily labels, monthly separator and labels
     let y = config.col_head.height - 12,
-      date = new Date(config.center_date)
+      date = new Date(config.center_date.getTime())
     date.setDate(date.getDate() - config.date_range / 2)
     for (let i = 0; i < config.date_range; i++) {
       let x = config.grid.width * i

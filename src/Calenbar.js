@@ -1,12 +1,14 @@
 import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
+import Util from './Util.js'
 import Canvas from './Calenbar.Canvas.js'
 import TopLeftBlank from './Calenbar.TopLeftBlank.js'
 import RowHeaders from './Calenbar.RowHeaders.js'
 import ColCalendar from './Calenbar.ColCalendar.js'
 import Bar from './Calenbar.Bar.js'
+import DateProcessor from './Calenbar.DateProcessor.js'
 
 var defaultConfig = {
-  center_date: new Date('2017/6/25'),
+  center_date: new DateProcessor(new Date()),
   date_range: 60,
   bar: {
     padding: 4,
@@ -97,7 +99,7 @@ export default class Calenbar {
   }
 
   onBarAdded(bar) {
-    return this.putBar(bar)
+    this._bars.push(bar)
   }
 
   onCollisionCheckRequired(bar) {
@@ -171,7 +173,7 @@ export default class Calenbar {
   doesIntersectWith(bar) {
     return this._bars
       .filter(r => r.rowId === bar.rowId)
-      .filter(r => r.id !== bar.id)
+      .filter(r => Util.isValidId(r.id) ? (r.id !== bar.id) : true)
       .filter(r => r !== bar)
       .some(r => {
         return bar.doesIntersectWith(r)
@@ -180,3 +182,4 @@ export default class Calenbar {
 }
 
 Calenbar.Bar = Bar
+Calenbar.Date = DateProcessor

@@ -24,4 +24,12 @@ export default class Util {
 
     return widthNoScroll - widthWithScroll
   }
+
+  static halfRound(v) {
+    return Math.round(v * 2) / 2
+  }
+
+  static isValidId(id) {
+    return (typeof id === 'string') || (typeof id === 'number')
+  }
 }
