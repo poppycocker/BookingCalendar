@@ -11,6 +11,9 @@ export default class DateProcessor {
       this._d = new Date(year, month - 1, date, !!half ? 12 : 0)
     }
   }
+  clone() {
+    return new DateProcessor(this)
+  }
   getTime() {
     return this._d.getTime()
   }

@@ -13,7 +13,15 @@ var defaultConfig = {
   bar: {
     padding: 4,
     round: 5,
-    fill: '#1e88e5'
+    fill: '#1e88e5',
+    stroke: '#105189',
+    strokeWidth: 2
+  },
+  ghost: {
+    padding: 2,
+    round: 5,
+    stroke: '#1e88e5',
+    strokeWidth: 2
   },
   row_head: {
     width: 120,
@@ -32,6 +40,10 @@ var defaultConfig = {
 }
 
 export default class Calenbar {
+  static get defaultConfig() {
+    return Object.assign({}, defaultConfig)
+  }
+
   /**
    * Constructs the object.
    *
@@ -66,7 +78,12 @@ export default class Calenbar {
   // this.render()
   }
   _initializeConfig(config) {
-    this._config = config || defaultConfig
+    this._config = config || Calenbar.defaultConfig
+    // to avoid
+    if (this._config.ghost.fill) {
+      console.log('config.ghost.fill will be ignored (always "none" is set).')
+    }
+    this._config.ghost.fill = 'none'
   }
   _initializeCanvas(id) {
     const config = this._config

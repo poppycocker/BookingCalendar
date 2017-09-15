@@ -32,4 +32,5 @@ export default class Util {
   static isValidId(id) {
     return (typeof id === 'string') || (typeof id === 'number')
   }
+
 }

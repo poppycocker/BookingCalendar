@@ -20,29 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
     new Calenbar.Bar('CCC', d(2017, 6, 25, 1), d(2017, 6, 25, 0), '04'),
     new Calenbar.Bar('EEE', d(2017, 6, 28, 0), d(2017, 7, 16, 1), '05')
   ]
-  const config = {
-    center_date: d(2017, 7, 1, 0),
-    date_range: 60,
-    bar: {
-      padding: 4,
-      round: 5,
-      fill: '#1e88e5'
-    },
-    row_head: {
-      width: 120,
-      padding: 4,
-      round: 5,
-      fill: '#bada55'
-    },
-    col_head: {
-      height: 80,
-      font_size: 12
-    },
-    grid: {
-      width: 50,
-      height: 80
-    }
-  }
+  const config = Calenbar.defaultConfig
+  config.center_date = d(2017, 7, 1, 0)
 
   window.cb = new Calenbar('cal', rows, bars, config)
 })

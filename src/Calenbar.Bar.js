@@ -1,5 +1,4 @@
 import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
-import moment from 'moment'
 import Util from './Util.js'
 import Observable from './Calenbar.Observable.js'
 import DateProcessor from './Calenbar.DateProcessor.js'
@@ -94,42 +93,66 @@ export default class Bar extends Observable {
   }
 
   _create() {
-    let config = this.canvas.config
-    let p = this.canvas.gridPosToScreenPoint({
+    let config = this._canvas.config
+    let p = this._canvas.gridPosToScreenPoint({
       rowId: this._rowId,
       date: this.startDate
     })
-    let pad = config.bar.padding
+    const style = this._getDrawingStyle()
+    let pad = style.padding
     let x = pad + p.x
     let y = pad + p.y
-    let w = config.grid.width * (this._finish.diffDays(this._start)) - pad * 2
+    let w = config.grid.width * this._finish.diffDays(this._start) - pad * 2
     let h = config.grid.height - pad * 2
-    let r = config.bar.round
-    this._element = this.canvas.snapElement.rect(x, y, w, h, r).attr({
-      fill: config.bar.fill
-    })
+    let r = style.round
+    this._element = this._getLayerToAppend()
+      .rect(x, y, w, h, r)
+      .attr({
+        fill: style.fill,
+        stroke: style.stroke,
+        strokeWidth: style.strokeWidth
+      })
     this._setEventHandlers()
   }
 
   _modify() {
-    let config = this.canvas.config
-    let days = Util.halfRound((this.finishDate.getTime() - this.startDate.getTime()) / (1000 * 60 * 60 * 24))
-    let pad = config.bar.padding
-    let p = this.canvas.gridPosToScreenPoint({
+    let config = this._canvas.config
+    let days = Util.halfRound(
+      (this.finishDate.getTime() - this.startDate.getTime()) /
+        (1000 * 60 * 60 * 24)
+    )
+    const style = this._getDrawingStyle()
+    let pad = style.padding
+    let p = this._canvas.gridPosToScreenPoint({
       rowId: this._rowId,
       date: this.startDate
     })
     this._element.attr({
       x: pad + p.x,
       y: pad + p.y,
-      width: config.grid.width * (Math.abs(days)) - pad * 2
+      width: config.grid.width * Math.abs(days) - pad * 2
     })
     return this._element
   }
 
+  _getDrawingStyle() {
+    return this._canvas.config.bar
+  }
+
+  _getLayerToAppend() {
+    return this._canvas.frontLayer
+  }
+
   _setEventHandlers() {
     this._element.hover(this._onHoverIn, this._onHoverOut, this, this)
-    this._element.drag(this._onDragMove, this._onDragStart, this._onDragEnd, this, this, this)
+    this._element.drag(
+      this._onDragMove,
+      this._onDragStart,
+      this._onDragEnd,
+      this,
+      this,
+      this
+    )
   }
 
   _releaseEventHandlers() {
@@ -149,7 +172,7 @@ export default class Bar extends Observable {
   }
   _onDragMove(dx, dy, x, y, e) {
     e.stopPropagation()
-    let config = this.canvas.config
+    let config = this._canvas.config
     let daysStart2Current = Util.halfRound(dx / config.grid.width)
     let daysStart2Prev = this._start.diffDays(this._dragOrigin)
     let daysPrev2Current = daysStart2Current - daysStart2Prev
@@ -190,11 +213,14 @@ export default class Bar extends Observable {
     this.raiseChange()
   }
   releaseFromCanvas() {
-    // remove event listener
-    this._releaseEventHandlers()
     this.clearAllListener()
-    // remove self from canvas
-    this._element.remove()
+    if (this._element) {
+      // remove event listener
+      this._releaseEventHandlers()
+      // remove self from canvas
+      this._element.remove()
+      this._element = null
+    }
     // this._canvas.removeBar(this.id)
     this._canvas = null
     return true

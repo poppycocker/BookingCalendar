@@ -1,9 +1,7 @@
 import moment from 'moment'
-import Util from './Util.js'
 import Bar from './Calenbar.Bar.js'
 
 export default class DrawingState {
-
   static get IDLE() {
     return 0x0
   }
