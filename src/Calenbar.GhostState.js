@@ -1,4 +1,5 @@
 import Ghost from './Calenbar.Ghost.js'
+import DateRange from './Calenbar.DateRange.js'
 
 export default class GhostState {
   static get HIDDEN() {
@@ -18,28 +19,26 @@ export default class GhostState {
     return this._state
   }
 
-  get bar() {
-    return this._ghost
-  }
-
   show(pos) {
     if (!this._ghost) {
       this._ghost = new Ghost(pos.rowId, pos.date, pos.date)
     }
-    if (this._ghost.startDate.equals(pos.date) && this._ghost.rowId === pos.rowId) {
+    if (
+      this._ghost.dateRange.start.equals(pos.date) &&
+      this._ghost.rowId === pos.rowId
+    ) {
+      return false
+    }
+    const range = new DateRange(pos.date, pos.date.clone().shift(0.5))
+    if (!this._canvas.checkCollision(pos.rowId, range)) {
+      this.hide()
       return false
     }
     this._ghost.canvas = this._canvas
     this._ghost.rowId = pos.rowId
-    this._ghost.startDate = pos.date
-    this._ghost.finishDate = this._ghost.startDate.clone()
-    this._ghost.finishDate.addDate(0.5)
-    if (!this._canvas.checkCollision(this._ghost)) {
-      this.hide()
-      return false
-    }
-    this._state = GhostState.VISIBLE
+    this._ghost.dateRange = range
     this._ghost.render()
+    this._state = GhostState.VISIBLE
     return true
   }
 

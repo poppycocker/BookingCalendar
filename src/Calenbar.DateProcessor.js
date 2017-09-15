@@ -17,16 +17,19 @@ export default class DateProcessor {
   getTime() {
     return this._d.getTime()
   }
-  addDate(dates) {
-    this._d.setDate(this._d.getDate() + dates)
+  shift(days) {
+    this._d.setDate(this._d.getDate() + days)
+    return this
   }
   equals(another) {
     const d1 = this._d
     const d2 = another._d
-    return d1.getFullYear() === d2.getFullYear() &&
+    return (
+      d1.getFullYear() === d2.getFullYear() &&
       d1.getMonth() === d2.getMonth() &&
       d1.getDay() === d2.getDay() &&
       d1.getHours() === d2.getHours()
+    )
   }
   diffDays(another) {
     const m1 = this.moment()

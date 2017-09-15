@@ -1,6 +1,6 @@
 import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
 import Util from './Util.js'
-import Canvas from './Calenbar.Canvas.js'
+import Canvas from './Calenbar.Canvas'
 import TopLeftBlank from './Calenbar.TopLeftBlank.js'
 import RowHeaders from './Calenbar.RowHeaders.js'
 import ColCalendar from './Calenbar.ColCalendar.js'
@@ -75,7 +75,7 @@ export default class Calenbar {
 
     this._bars.forEach(bar => this.putBar(bar))
 
-  // this.render()
+    // this.render()
   }
   _initializeConfig(config) {
     this._config = config || Calenbar.defaultConfig
@@ -87,8 +87,8 @@ export default class Calenbar {
   }
   _initializeCanvas(id) {
     const config = this._config
-    let outerContainer = document.getElementById(id)
-    let container = document.createElement('div')
+    const outerContainer = document.getElementById(id)
+    const container = document.createElement('div')
     container.style.display = 'grid'
     container.style.gridTemplateRows = config.col_head.height + 'px' + ' 1fr'
     container.style.gridTemplateColumns = config.row_head.width + 'px' + ' 1fr'
@@ -96,11 +96,16 @@ export default class Calenbar {
     container.style.height = '100%'
     outerContainer.appendChild(container)
 
-    let topLeftBlank = new TopLeftBlank(container, config)
-    let colCalendar = new ColCalendar(container, config)
-    let rowHeaders = new RowHeaders(container, config, this._rows)
-    let canvas = new Canvas(container, config, this._rows, this.onCollisionCheckRequired.bind(this))
-    canvas.addListener('bar_added', this.onBarAdded, this)
+    const topLeftBlank = new TopLeftBlank(container, config)
+    const colCalendar = new ColCalendar(container, config)
+    const rowHeaders = new RowHeaders(container, config, this._rows)
+    const canvas = new Canvas(
+      container,
+      config,
+      this._rows,
+      this.onCollisionCheckRequired.bind(this)
+    )
+    canvas.on('bar_added', this.onBarAdded, this)
     this._canvas = canvas
 
     // sync scroll
@@ -110,17 +115,18 @@ export default class Calenbar {
     })
 
     // initial scroll position: today
-    canvas.containerDom.scrollLeft = canvas.snapElement.attr('width').replace('px', '') / 2
-      - canvas.containerDom.clientWidth / 2
-      + config.grid.width / 2
+    canvas.containerDom.scrollLeft =
+      canvas.snapElement.attr('width').replace('px', '') / 2 -
+      canvas.containerDom.clientWidth / 2 +
+      config.grid.width / 2
   }
 
   onBarAdded(bar) {
     this._bars.push(bar)
   }
 
-  onCollisionCheckRequired(bar) {
-    return !this.doesIntersectWith(bar)
+  onCollisionCheckRequired(rowId, dateRange, self) {
+    return !this.doesIntersectWith(rowId, dateRange, self)
   }
 
   get bars() {
@@ -161,7 +167,7 @@ export default class Calenbar {
    * @fires      remove
    */
   removeBar(id) {
-    let idx = this._bars.findIndex(bar => bar.id === id)
+    const idx = this._bars.findIndex(bar => bar.id === id)
     if (idx === -1) {
       return false
     }
@@ -180,21 +186,22 @@ export default class Calenbar {
     if (!this._rows[bar.rowId]) {
       return false
     }
-    // check: id uniqueness
-    if (bar.hasEffectiveId() && this.findBar(bar.id)) {
+    // check: id uniqueness (if effective one is set)
+    if (Util.isEffectiveId(bar.id) ? !!this.findBar(bar.id) : true) {
+      return false
+    }
+    // check: already exists
+    if (this._bars.some(el => el === bar)) {
       return false
     }
     // check: date range intersection
-    return !this.doesIntersectWith(bar)
+    return !this.doesIntersectWith(bar.rowId, bar.dateRange)
   }
-  doesIntersectWith(bar) {
+  doesIntersectWith(rowId, dateRange, self) {
     return this._bars
-      .filter(r => r.rowId === bar.rowId)
-      .filter(r => Util.isValidId(r.id) ? (r.id !== bar.id) : true)
-      .filter(r => r !== bar)
-      .some(r => {
-        return bar.doesIntersectWith(r)
-      })
+      .filter(bar => bar.rowId === rowId)
+      .filter(bar => (self ? bar !== self : true))
+      .some(bar => dateRange.doesIntersectWith(bar.dateRange))
   }
 }
 

@@ -4,9 +4,9 @@ module.exports = {
   },
   output: {
     path: __dirname + '/dist',
-    filename: "calenbar.js",
-    library: "Calenbar",
-    libraryTarget: "umd"
+    filename: 'calenbar.js',
+    library: 'Calenbar',
+    libraryTarget: 'umd'
   },
   devtool: 'inline-source-map'
-};
+}

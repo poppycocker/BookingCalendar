@@ -1,5 +1,6 @@
 import moment from 'moment'
 import Bar from './Calenbar.Bar.js'
+import DateRange from './Calenbar.DateRange.js'
 
 export default class DrawingState {
   static get IDLE() {
@@ -45,15 +46,21 @@ export default class DrawingState {
     }
     this._currentPos = currentPos
     if (!this._bar) {
-      this._bar = new Bar(this._startPos.rowId, this._startPos.date, this._currentPos.date)
+      this._bar = new Bar(
+        this._startPos.rowId,
+        this._startPos.date,
+        this._currentPos.date
+      )
       this._bar.canvas = this._canvas
       this._bar.render()
       this._state = DrawingState.RENDERED
     }
-    const isReverse = this._currentPos.date.getTime() < this._startPos.date.getTime()
-    this._bar.startDate = isReverse ? this._currentPos.date : this._startPos.date
-    this._bar.finishDate = isReverse ? this._startPos.date : this._currentPos.date
-
+    const range = new DateRange(this._startPos.date, this._currentPos.date)
+    if (!this._canvas.checkCollision(this._bar.rowId, range, this._bar)) {
+      return false
+    }
+    this._bar.dateRange = range
+    this._bar.render()
     return true
   }
 

@@ -24,9 +24,9 @@ export default class Observable {
    * @return {Observable} this
    * @api stable
    */
-  addListener(type, listener, context) {
+  on(type, listener, context) {
     context = context || null
-    this.getEventDispatcher(type).addListener(listener, context)
+    this._getEventDispatcher(type).on(listener, context)
     return this
   }
 
@@ -37,57 +37,32 @@ export default class Observable {
    * @return {Observable} this
    * @api stable
    */
-  removeListener(type, listener) {
-    this.getEventDispatcher(type).removeListener(listener)
+  un(type, listener) {
+    this._getEventDispatcher(type).un(listener)
     return this
   }
 
   /**
-   * clear listeners of specific event type.
+   * dispatch event of specific type.
    * @param {string} type type(name) of event
    * @return {Observable} this
    * @api stable
    */
-  clearListener(type) {
-    this.getEventDispatcher(type).clearListener()
+  dispatch(type, ...args) {
+    this._getEventDispatcher(type).dispatch(args)
     return this
-  }
-
-  /**
-   * clear all listeners
-   * @return {Observable} this
-   * @api stable
-   */
-  clearAllListener() {
-    Object.keys(this._dispatchers).forEach(type => this.clearListener(type))
-    return this
-  }
-
-  /**
-   * check existance of specific listener.
-   * @param {string} type type(name) of event
-   * @param {function} listener listener function to check existance
-   * @return {boolean} exists or not
-   * @api stable
-   */
-  hasListener(type, listener) {
-    let dispatcher = this.getEventDispatcher(type)
-    if (!dispatcher) {
-      return false
-    }
-    return dispatcher.hasListener(listener)
   }
 
   /**
    * get the event dispatcher object for specific event type.
    * @private
    * @param {string} type type(name) of event
-   * @return {EventDispatcher?} event dispatcher object. if not found, returns null.
+   * @return {EventDispatcher?} event dispatcher object
    */
-  getEventDispatcher(type) {
+  _getEventDispatcher(type) {
     if (!this._dispatchers[type]) {
       this._dispatchers[type] = new EventDispatcher()
     }
-    return (this._dispatchers[type] || null)
+    return this._dispatchers[type]
   }
 }

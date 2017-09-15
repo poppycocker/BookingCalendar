@@ -17,7 +17,7 @@ export default class Canvas extends Fragment {
     this._setEventHandler()
 
     this._startDate = new DateProcessor(config.center_date)
-    this._startDate.addDate(config.date_range / 2 * -1)
+    this._startDate.shift(config.date_range / 2 * -1)
 
     this._drawing = new DrawingState(this)
     this._ghost = new GhostState(this)
@@ -32,40 +32,65 @@ export default class Canvas extends Fragment {
   }
 
   _setUpSvg() {
-    let style = this._containerDom.style
+    const style = this._containerDom.style
     const config = this._config
     const rowNum = Object.keys(this._rows).length
     style.overflow = 'scroll'
-    style.width = (this._outerContainer.clientWidth - config.row_head.width) + 'px'
-    style.height = (this._outerContainer.clientHeight) + 'px'
+    style.width =
+      this._outerContainer.clientWidth - config.row_head.width + 'px'
+    style.height = this._outerContainer.clientHeight + 'px'
     style.gridArea = '2 / 2 / 2 / 2'
 
     this._snapElement.attr({
       width: config.grid.width * config.date_range + 'px',
-      height: (config.grid.height * rowNum) + 'px'
+      height: config.grid.height * rowNum + 'px'
     })
 
     this._backLayer = this._snapElement.svg()
     const path = 'M %w 0 L 0 0 0 %h'
       .replace('%w', config.grid.width)
       .replace('%h', config.grid.height)
-    const p = this._backLayer.path(path).attr({
-      fill: 'none',
-      stroke: '#ccc',
-      strokeWidth: 3
-    }).pattern(0, 0, config.grid.width, config.grid.height)
-    this._backLayer.rect(0, 0, this._snapElement.attr('width'), this._snapElement.attr('height')).attr({
-      fill: 'none'
-    })
+    const p = this._backLayer
+      .path(path)
+      .attr({
+        fill: 'none',
+        stroke: '#ccc',
+        strokeWidth: 3
+      })
+      .pattern(0, 0, config.grid.width, config.grid.height)
+    this._backLayer
+      .rect(
+        0,
+        0,
+        this._snapElement.attr('width'),
+        this._snapElement.attr('height')
+      )
+      .attr({
+        fill: 'none'
+      })
 
     this._frontLayer = this._snapElement.svg()
-    this._frontLayer.rect(0, 0, this._snapElement.attr('width'), this._snapElement.attr('height')).attr({
-      fill: p
-    })
+    this._frontLayer
+      .rect(
+        0,
+        0,
+        this._snapElement.attr('width'),
+        this._snapElement.attr('height')
+      )
+      .attr({
+        fill: p
+      })
   }
 
   _setEventHandler() {
-    this._frontLayer.drag(this._onDragMove, this._onDragStart, this._onDragEnd, this, this, this)
+    this._frontLayer.drag(
+      this._onDragMove,
+      this._onDragStart,
+      this._onDragEnd,
+      this,
+      this,
+      this
+    )
     this._frontLayer.mousemove(this._onMouseMove.bind(this))
   }
 
@@ -82,7 +107,7 @@ export default class Canvas extends Fragment {
   _onDragMove(dx, dy, x, y, e) {
     e.stopPropagation()
     this._ghost.hide()
-    let pos = this.screenPointToGridPos(e.offsetX, e.offsetY)
+    const pos = this.screenPointToGridPos(e.offsetX, e.offsetY)
     if (this._drawing.now < DrawingState.PROCESSING) {
       return
     }
@@ -90,13 +115,7 @@ export default class Canvas extends Fragment {
     if (e.clientX === 0 && e.clientY === 0) {
       return
     }
-    if (!this._drawing.update(pos)) {
-      return
-    }
-    if (!this._collisionCheckCallback(this._drawing.bar)) {
-      return
-    }
-    this._drawing.bar.render()
+    this._drawing.update(pos)
   }
 
   _onDragEnd(e) {
@@ -105,7 +124,7 @@ export default class Canvas extends Fragment {
       this._drawing.finish()
       return
     }
-    this.getEventDispatcher('bar_added').dispatch(this._drawing.bar)
+    this.dispatch('bar_added', this._drawing.bar)
     this._drawing.finish()
     const pos = this.screenPointToGridPos(e.offsetX, e.offsetY)
     this._ghost.show(pos)
@@ -121,18 +140,18 @@ export default class Canvas extends Fragment {
     this._ghost.show(pos)
   }
 
-  checkCollision(bar) {
-    return this._collisionCheckCallback(bar)
+  checkCollision(rowId, dateRange, self) {
+    return this._collisionCheckCallback(rowId, dateRange, self)
   }
 
   // returns row idx & date
   screenPointToGridPos(x, y) {
     const config = this._config
-    let rowIdx = Math.floor(y / config.grid.height)
-    let rowId = this.rowIdFromIdx(rowIdx)
-    let date = this._startDate.clone()
+    const rowIdx = Math.floor(y / config.grid.height)
+    const rowId = this.rowIdFromIdx(rowIdx)
+    const date = this._startDate.clone()
     const shift = config.grid.width / 4
-    date.addDate(Util.halfRound((x - shift) / config.grid.width))
+    date.shift(Util.halfRound((x - shift) / config.grid.width))
     return {
       rowId,
       date
@@ -141,7 +160,7 @@ export default class Canvas extends Fragment {
 
   gridPosToScreenPoint(pos) {
     const config = this._config
-    let days = pos.date.diffDays(this._startDate)
+    const days = pos.date.diffDays(this._startDate)
     return {
       x: config.grid.width * days,
       y: config.grid.height * this.rowIdxFromId(pos.rowId)

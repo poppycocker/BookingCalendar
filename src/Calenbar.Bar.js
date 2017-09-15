@@ -1,7 +1,7 @@
 import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
 import Util from './Util.js'
 import Observable from './Calenbar.Observable.js'
-import DateProcessor from './Calenbar.DateProcessor.js'
+import DateRange from './Calenbar.DateRange.js'
 
 export default class Bar extends Observable {
   /**
@@ -16,9 +16,7 @@ export default class Bar extends Observable {
   constructor(rowId, startDate, finishDate, id, customData) {
     super()
     this._rowId = rowId
-    this._start = startDate
-    this._finish = finishDate
-    this._correctDateOrder()
+    this._dateRange = new DateRange(startDate, finishDate)
     this._id = id
     this._customData = customData
     /**
@@ -57,24 +55,13 @@ export default class Bar extends Observable {
   set canvas(canvas) {
     return canvas ? this.bindTo(canvas) : this.releaseFromCanvas()
   }
-  get startDate() {
-    return this._start
+  get dateRange() {
+    return this._dateRange
   }
-  set startDate(date) {
-    this._start = date
-    this._correctDateOrder()
+  set dateRange(dateRange) {
+    this._dateRange = dateRange
     this.raiseChange()
   }
-  get finishDate() {
-    return this._finish
-  }
-  set finishDate(date) {
-    this._finish = date
-    this._correctDateOrder()
-    this.raiseChange()
-  }
-  hasEffectiveId() {
-    return !!this._id
   }
   /**
    * render function
@@ -83,28 +70,19 @@ export default class Bar extends Observable {
     this._element ? this._modify() : this._create()
   }
 
-  _correctDateOrder() {
-    if (this._start.getTime() <= this._finish.getTime()) {
-      return
-    }
-    const tmp = this._start
-    this._start = this._finish
-    this._finish = tmp
-  }
-
   _create() {
-    let config = this._canvas.config
-    let p = this._canvas.gridPosToScreenPoint({
+    const config = this._canvas.config
+    const p = this._canvas.gridPosToScreenPoint({
       rowId: this._rowId,
-      date: this.startDate
+      date: this._dateRange.start
     })
     const style = this._getDrawingStyle()
-    let pad = style.padding
-    let x = pad + p.x
-    let y = pad + p.y
-    let w = config.grid.width * this._finish.diffDays(this._start) - pad * 2
-    let h = config.grid.height - pad * 2
-    let r = style.round
+    const pad = style.padding
+    const x = pad + p.x
+    const y = pad + p.y
+    const w = config.grid.width * this._dateRange.days - pad * 2
+    const h = config.grid.height - pad * 2
+    const r = style.round
     this._element = this._getLayerToAppend()
       .rect(x, y, w, h, r)
       .attr({
@@ -116,16 +94,13 @@ export default class Bar extends Observable {
   }
 
   _modify() {
-    let config = this._canvas.config
-    let days = Util.halfRound(
-      (this.finishDate.getTime() - this.startDate.getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
+    const config = this._canvas.config
+    const days = this._dateRange.days
     const style = this._getDrawingStyle()
-    let pad = style.padding
-    let p = this._canvas.gridPosToScreenPoint({
+    const pad = style.padding
+    const p = this._canvas.gridPosToScreenPoint({
       rowId: this._rowId,
-      date: this.startDate
+      date: this._dateRange.start
     })
     this._element.attr({
       x: pad + p.x,
@@ -168,23 +143,20 @@ export default class Bar extends Observable {
   }
   _onDragStart(x, y, e) {
     e.stopPropagation()
-    this._dragOrigin = new DateProcessor(this._start)
+    this._dragOrigin = this._dateRange.start.clone()
   }
   _onDragMove(dx, dy, x, y, e) {
     e.stopPropagation()
-    let config = this._canvas.config
-    let daysStart2Current = Util.halfRound(dx / config.grid.width)
-    let daysStart2Prev = this._start.diffDays(this._dragOrigin)
-    let daysPrev2Current = daysStart2Current - daysStart2Prev
-    this._start.addDate(daysPrev2Current)
-    this._finish.addDate(daysPrev2Current)
+    const config = this._canvas.config
+    const daysStart2Current = Util.halfRound(dx / config.grid.width)
+    const daysStart2Prev = this._dateRange.start.diffDays(this._dragOrigin)
+    const daysPrev2Current = daysStart2Current - daysStart2Prev
 
-    if (!this._canvas.checkCollision(this)) {
-      // reset
-      this._start.addDate(daysPrev2Current * -1)
-      this._finish.addDate(daysPrev2Current * -1)
+    const shifted = this._dateRange.clone().shift(daysPrev2Current)
+    if (!this._canvas.checkCollision(this._rowId, shifted, this)) {
       return
     }
+    this._dateRange = shifted
     this.render()
   }
   _onDragEnd(e) {
@@ -198,13 +170,7 @@ export default class Bar extends Observable {
     // }
     // this._canvas.notifyChange(record)
   }
-  doesIntersectWith(another) {
-    let s1 = this._start.moment()
-    let s2 = another._start.moment()
-    let f1 = this._finish.moment()
-    let f2 = another._finish.moment()
-    return f1.diff(s2) > 0 && f2.diff(s1) > 0
-  }
+
   bindTo(canvas) {
     if (this._canvas) {
       return false
@@ -213,7 +179,6 @@ export default class Bar extends Observable {
     this.raiseChange()
   }
   releaseFromCanvas() {
-    this.clearAllListener()
     if (this._element) {
       // remove event listener
       this._releaseEventHandlers()

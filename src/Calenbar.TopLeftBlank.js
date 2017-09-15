@@ -2,7 +2,6 @@ import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist
 import Fragment from './Calenbar.Fragment.js'
 
 export default class TopLeftBlank extends Fragment {
-
   constructor(outerContainer, config) {
     super(outerContainer, config)
     this._setUp()
