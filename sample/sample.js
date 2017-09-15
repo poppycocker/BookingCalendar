@@ -14,11 +14,24 @@ document.addEventListener('DOMContentLoaded', function() {
     return new Calenbar.Date(y, m, d, half)
   }
   const bars = [
-    new Calenbar.Bar('AAA', d(2017, 6, 20, 0), d(2017, 6, 22, 0), '01'),
-    new Calenbar.Bar('AAA', d(2017, 6, 25, 1), d(2017, 6, 27, 1), '02'),
-    new Calenbar.Bar('BBB', d(2017, 6, 25, 0), d(2017, 6, 26, 0), '03'),
-    new Calenbar.Bar('CCC', d(2017, 6, 25, 1), d(2017, 6, 25, 0), '04'),
-    new Calenbar.Bar('EEE', d(2017, 6, 28, 0), d(2017, 7, 16, 1), '05')
+    new Calenbar.Bar('AAA', d(2017, 6, 20, 0), d(2017, 6, 22, 0), {
+      id: '01',
+      lock: false
+    }),
+    new Calenbar.Bar('AAA', d(2017, 6, 25, 1), d(2017, 6, 27, 1), {
+      id: '02',
+      lock: true
+    }),
+    new Calenbar.Bar('BBB', d(2017, 6, 25, 0), d(2017, 6, 26, 0), {
+      id: '03'
+    }),
+    new Calenbar.Bar('CCC', d(2017, 6, 25, 1), d(2017, 6, 25, 0), {
+      id: '04'
+    }),
+    new Calenbar.Bar('EEE', d(2017, 6, 28, 0), d(2017, 7, 16, 1), {
+      id: '05',
+      lock: true
+    })
   ]
   const config = Calenbar.defaultConfig
   config.center_date = d(2017, 7, 1, 0)

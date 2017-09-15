@@ -10,15 +10,17 @@ export default class Bar extends Observable {
    * @param {string} rowId - The row identifier
    * @param {Date} startDate - The start date
    * @param {Date} finishDate - The finish date
-   * @param {string?} [id] - The identifier of bar
-   * @param {Object} [customData] - The object contains customData
+   * @param {object} [options] - options
+   *   @param {string} [options.id] - The identifier of bar
+   *   @param {boolean} [options.lock] - Lock this bar or not
    */
-  constructor(rowId, startDate, finishDate, id, customData) {
+  constructor(rowId, startDate, finishDate, options) {
     super()
     this._rowId = rowId
     this._dateRange = new DateRange(startDate, finishDate)
-    this._id = id
-    this._customData = customData
+    const opts = options || {}
+    this._id = opts.id
+    this._lock = opts.lock || false
     /**
      * canvas
      * @type {Canvas}
@@ -33,15 +35,23 @@ export default class Bar extends Observable {
     return this._id
   }
   set id(id) {
+    if (this._lock) {
+      return this
+    }
     this._id = id
     this.raiseChange()
+    return this
   }
   get rowId() {
     return this._rowId
   }
   set rowId(rowId) {
+    if (this._lock) {
+      return this
+    }
     this._rowId = rowId
     this.raiseChange()
+    return this
   }
   get canvas() {
     return this._canvas
@@ -50,19 +60,30 @@ export default class Bar extends Observable {
    * bind to / release from canvas surface
    *
    * @param      {Canvas?}  canvas    The base canvas to add this record.
-   * @return     {boolean} success / failed
+   * @return     {Calenbar.Bar} this
    */
   set canvas(canvas) {
-    return canvas ? this.bindTo(canvas) : this.releaseFromCanvas()
+    canvas ? this.bindTo(canvas) : this.releaseFromCanvas()
+    return this
   }
   get dateRange() {
-    return this._dateRange
+    return this._lock ? this._dateRange.clone() : this._dateRange
   }
   set dateRange(dateRange) {
+    if (this._lock) {
+      return this
+    }
     this._dateRange = dateRange
     this.raiseChange()
+    return this
   }
+  get lock() {
+    return this._lock
   }
+  set lock(lock) {
+    this._lock = lock
+  }
+
   /**
    * render function
    */
@@ -136,17 +157,23 @@ export default class Bar extends Observable {
   }
 
   _onHoverIn(e, x, y) {
-    this._element.node.style.cursor = 'move'
+    this._element.node.style.cursor = this._lock ? 'not-allowed' : 'move'
   }
   _onHoverOut(e, x, y) {
     this._element.node.style.cursor = 'auto'
   }
   _onDragStart(x, y, e) {
     e.stopPropagation()
+    if (this._lock) {
+      return
+    }
     this._dragOrigin = this._dateRange.start.clone()
   }
   _onDragMove(dx, dy, x, y, e) {
     e.stopPropagation()
+    if (this._lock) {
+      return
+    }
     const config = this._canvas.config
     const daysStart2Current = Util.halfRound(dx / config.grid.width)
     const daysStart2Prev = this._dateRange.start.diffDays(this._dragOrigin)
@@ -161,6 +188,9 @@ export default class Bar extends Observable {
   }
   _onDragEnd(e) {
     e.stopPropagation()
+    if (this._lock) {
+      return
+    }
     this.raiseChange()
   }
 
