@@ -1,4 +1,3 @@
-import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
 import Util from './Util.js'
 import Observable from './Calenbar.Observable.js'
 import DateRange from './Calenbar.DateRange.js'
@@ -104,14 +103,17 @@ export default class Bar extends Observable {
     const w = config.grid.width * this._dateRange.days - pad * 2
     const h = config.grid.height - pad * 2
     const r = style.round
-    this._element = this._getLayerToAppend()
-      .rect(x, y, w, h, r)
-      .attr({
-        fill: style.fill,
-        stroke: style.stroke,
-        strokeWidth: style.strokeWidth
-      })
+    this._element = this._getLayerToAppend().rect(x, y, w, h, r)
+    this._setStyle(style)
     this._setEventHandlers()
+  }
+
+  _setStyle(style) {
+    this._element.attr({
+      fill: style.fill,
+      stroke: style.stroke,
+      strokeWidth: style.strokeWidth
+    })
   }
 
   _modify() {
@@ -132,7 +134,11 @@ export default class Bar extends Observable {
   }
 
   _getDrawingStyle() {
-    return this._canvas.config.bar
+    return this._canvas.config.bar.default
+  }
+
+  _getSelectedStyle() {
+    return this._canvas.config.bar.selected
   }
 
   _getLayerToAppend() {
@@ -162,6 +168,9 @@ export default class Bar extends Observable {
   _onHoverOut(e, x, y) {
     this._element.node.style.cursor = 'auto'
   }
+  _onClick() {
+    this._canvas.selectedBar = this
+  }
   _onDragStart(x, y, e) {
     e.stopPropagation()
     if (this._lock) {
@@ -169,7 +178,8 @@ export default class Bar extends Observable {
     }
     this._dragOrigin = {
       date: this._dateRange.start.clone(),
-      rowIdx: this._canvas.rowIdxFromId(this._rowId)
+      rowIdx: this._canvas.rowIdxFromId(this._rowId),
+      tripped: false
     }
   }
   _onDragMove(dx, dy, x, y, e) {
@@ -177,12 +187,13 @@ export default class Bar extends Observable {
     if (this._lock) {
       return
     }
+    const origin = this._dragOrigin
     const config = this._canvas.config
     const daysStart2Current = Util.halfRound(dx / config.grid.width)
-    const daysStart2Prev = this._dateRange.start.diffDays(this._dragOrigin.date)
+    const daysStart2Prev = this._dateRange.start.diffDays(origin.date)
     const daysPrev2Current = daysStart2Current - daysStart2Prev
     const shiftedRange = this._dateRange.clone().shift(daysPrev2Current)
-    const shiftedRowIdx = this._dragOrigin.rowIdx + Math.round(dy / config.grid.height)
+    const shiftedRowIdx = origin.rowIdx + Math.round(dy / config.grid.height)
     const shiftedRowId = this._canvas.rowIdFromIdx(shiftedRowIdx)
     if (!this._canvas.checkCollision(shiftedRowId, shiftedRange, this)) {
       return
@@ -190,12 +201,25 @@ export default class Bar extends Observable {
     this._dateRange = shiftedRange
     this._rowId = shiftedRowId
     this.render()
+    if (origin.tripped) {
+      return
+    }
+    if (
+      origin.rowIdx !== shiftedRowIdx ||
+      !origin.date.equals(shiftedRange.start)
+    ) {
+      origin.tripped = true
+    }
   }
   _onDragEnd(e) {
     e.stopPropagation()
     if (this._lock) {
       return
     }
+    if (!this._dragOrigin.tripped) {
+      this._onClick()
+    }
+    this._dragOrigin = null
     this.raiseChange()
   }
 
@@ -224,5 +248,21 @@ export default class Bar extends Observable {
     // this._canvas.removeBar(this.id)
     this._canvas = null
     return true
+  }
+
+  select() {
+    // change style
+    this._setStyle(this._getSelectedStyle())
+    // show drag handle
+  }
+
+  unselect() {
+    // restore style
+    this._setStyle(this._getDrawingStyle())
+    // hide drag handle
+  }
+
+  toString() {
+    return `${this._rowId}:${this._dateRange.toString()}`
   }
 }

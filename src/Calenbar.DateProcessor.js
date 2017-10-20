@@ -40,4 +40,10 @@ export default class DateProcessor {
   moment() {
     return moment(this._d)
   }
+  toString() {
+    const m = this.moment()
+    const yyyymmdd = m.format('YYYYMMDD')
+    const half = m.get('hour') !== 0
+    return `${yyyymmdd}.${half ? 5 : 0}`
+  }
 }

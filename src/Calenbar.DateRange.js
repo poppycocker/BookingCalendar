@@ -51,4 +51,8 @@ export default class DateRange {
   clone() {
     return new DateRange(this._start.clone(), this._finish.clone())
   }
+
+  toString() {
+    return `${this._start.toString()}-${this._finish.toString()}`
+  }
 }

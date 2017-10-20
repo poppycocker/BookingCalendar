@@ -36,5 +36,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const config = Calenbar.defaultConfig
   config.center_date = d(2017, 7, 1, 0)
 
-  window.cb = new Calenbar('cal', rows, bars, config)
+  const cb = new Calenbar('cal', rows, bars, config)
+  cb.on('bar_added', (bar) => {
+    const msg = bar ? `added: ${bar.toString()}` : 'null'
+    console.log(msg)
+  })
+  cb.on('bar_selected', (bar) => {
+    const msg = bar ? `selected: ${bar.toString()}` : 'released'
+    console.log(msg)
+  })
+
+  window.cb = cb
 })

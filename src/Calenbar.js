@@ -1,5 +1,6 @@
 import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
 import Util from './Util.js'
+import Observable from './Calenbar.Observable.js'
 import Canvas from './Calenbar.Canvas'
 import TopLeftBlank from './Calenbar.TopLeftBlank.js'
 import RowHeaders from './Calenbar.RowHeaders.js'
@@ -11,11 +12,20 @@ var defaultConfig = {
   center_date: new DateProcessor(new Date()),
   date_range: 60,
   bar: {
-    padding: 4,
-    round: 5,
-    fill: '#1e88e5',
-    stroke: '#105189',
-    strokeWidth: 2
+    default: {
+      padding: 4,
+      round: 5,
+      fill: '#1e88e5',
+      stroke: '#105189',
+      strokeWidth: 2
+    },
+    selected: {
+      padding: 4,
+      round: 5,
+      fill: '#59a4e5',
+      stroke: '#1e88e5',
+      strokeWidth: 4
+    }
   },
   ghost: {
     padding: 2,
@@ -39,7 +49,7 @@ var defaultConfig = {
   }
 }
 
-export default class Calenbar {
+export default class Calenbar extends Observable {
   static get defaultConfig() {
     return Object.assign({}, defaultConfig)
   }
@@ -53,6 +63,7 @@ export default class Calenbar {
    * @param {object} config - configs
    */
   constructor(id, rows, bars, config) {
+    super()
     this._initializeConfig(config)
     /**
      * bars
@@ -107,6 +118,7 @@ export default class Calenbar {
     )
     canvas.on('bar_added', this.onBarAdded, this)
     this._canvas = canvas
+    canvas.on('bar_selected', this.onBarSelected, this)
 
     // sync scroll
     canvas.containerDom.addEventListener('scroll', function(e) {
@@ -123,6 +135,11 @@ export default class Calenbar {
 
   onBarAdded(bar) {
     this._bars.push(bar)
+    this.dispatch('bar_added', bar)
+  }
+
+  onBarSelected(bar) {
+    this.dispatch('bar_selected', bar)
   }
 
   onCollisionCheckRequired(rowId, dateRange, self) {
@@ -143,6 +160,11 @@ export default class Calenbar {
    * @param      {Date}  date
    */
   set center(date) {}
+
+  get selectedBar() {
+    return this._canvas.selectedBar
+  }
+
   /**
    * Puts a bar.
    *

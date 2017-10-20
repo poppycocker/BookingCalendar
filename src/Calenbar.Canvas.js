@@ -1,7 +1,7 @@
-import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js'
 import Util from './Util.js'
 import Fragment from './Calenbar.Fragment.js'
 import DateProcessor from './Calenbar.DateProcessor.js'
+import DateRange from './Calenbar.DateRange.js'
 import DrawingState from './Calenbar.DrawingState.js'
 import GhostState from './Calenbar.GhostState.js'
 
@@ -21,6 +21,7 @@ export default class Canvas extends Fragment {
 
     this._drawing = new DrawingState(this)
     this._ghost = new GhostState(this)
+    this._selectedBar = null
   }
 
   get frontLayer() {
@@ -34,6 +35,23 @@ export default class Canvas extends Fragment {
   get rows() {
     // copy
     return Object.assign({}, this._rows)
+  }
+
+  get selectedBar() {
+    return this._selectedBar
+  }
+
+  set selectedBar(bar) {
+    if (this._selectedBar === bar) {
+      return
+    }
+    if (bar) {
+      bar.select()
+    } else {
+      this._selectedBar.unselect()
+    }
+    this._selectedBar = bar
+    this.dispatch('bar_selected', bar)
   }
 
   _setUpSvg() {
@@ -96,6 +114,7 @@ export default class Canvas extends Fragment {
       this,
       this
     )
+    this._frontLayer.click(this._onClick.bind(this))
     this._frontLayer.mousemove(this._onMouseMove.bind(this))
   }
 
@@ -133,6 +152,18 @@ export default class Canvas extends Fragment {
     this._drawing.finish()
     const pos = this.screenPointToGridPos(e.offsetX, e.offsetY)
     this._ghost.show(pos)
+  }
+
+  _onClick(e, x, y) {
+    const pos = this.screenPointToGridPos(e.offsetX, e.offsetY)
+    const range = new DateRange(pos.date, pos.date.clone().shift(0.5))
+    if (!this.checkCollision(pos.rowId, range)) {
+      return
+    }
+    // release selection
+    if (this.selectedBar) {
+      this.selectedBar = null
+    }
   }
 
   _onMouseMove(e) {
