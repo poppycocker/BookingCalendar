@@ -31,6 +31,11 @@ export default class Canvas extends Fragment {
     return this._backLayer
   }
 
+  get rows() {
+    // copy
+    return Object.assign({}, this._rows)
+  }
+
   _setUpSvg() {
     const style = this._containerDom.style
     const config = this._config
@@ -168,10 +173,12 @@ export default class Canvas extends Fragment {
   }
 
   rowIdFromIdx(idx) {
-    return Object.keys(this._rows)[idx]
+    const keys = Object.keys(this._rows)
+    const normalizedIdx = Math.min(Math.max(0, idx), keys.length - 1)
+    return keys[normalizedIdx]
   }
 
   rowIdxFromId(id) {
-    return Object.keys(this._rows).indexOf(id)
+    return Math.max(Object.keys(this._rows).indexOf(id), 0)
   }
 }

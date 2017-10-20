@@ -167,7 +167,10 @@ export default class Bar extends Observable {
     if (this._lock) {
       return
     }
-    this._dragOrigin = this._dateRange.start.clone()
+    this._dragOrigin = {
+      date: this._dateRange.start.clone(),
+      rowIdx: this._canvas.rowIdxFromId(this._rowId)
+    }
   }
   _onDragMove(dx, dy, x, y, e) {
     e.stopPropagation()
@@ -176,14 +179,16 @@ export default class Bar extends Observable {
     }
     const config = this._canvas.config
     const daysStart2Current = Util.halfRound(dx / config.grid.width)
-    const daysStart2Prev = this._dateRange.start.diffDays(this._dragOrigin)
+    const daysStart2Prev = this._dateRange.start.diffDays(this._dragOrigin.date)
     const daysPrev2Current = daysStart2Current - daysStart2Prev
-
-    const shifted = this._dateRange.clone().shift(daysPrev2Current)
-    if (!this._canvas.checkCollision(this._rowId, shifted, this)) {
+    const shiftedRange = this._dateRange.clone().shift(daysPrev2Current)
+    const shiftedRowIdx = this._dragOrigin.rowIdx + Math.round(dy / config.grid.height)
+    const shiftedRowId = this._canvas.rowIdFromIdx(shiftedRowIdx)
+    if (!this._canvas.checkCollision(shiftedRowId, shiftedRange, this)) {
       return
     }
-    this._dateRange = shifted
+    this._dateRange = shiftedRange
+    this._rowId = shiftedRowId
     this.render()
   }
   _onDragEnd(e) {
